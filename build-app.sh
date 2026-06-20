@@ -24,21 +24,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/Resources"
 
-echo "[3/4] Copying binary + Info.plist + Resources"
+echo "[3/4] Copying binary + Info.plist"
 cp "$BIN_PATH" "$APP/Contents/MacOS/${EXEC_NAME}"
 cp Info.plist "$APP/Contents/Info.plist"
-
-# Copy user-supplied animation assets into the bundle. Hidden files
-# (e.g. .gitkeep) are skipped. The directory is created above whether
-# or not anything ends up in it.
-RES_SRC="Sources/Jiji/Resources"
-if [[ -d "$RES_SRC" ]]; then
-    shopt -s nullglob
-    for f in "$RES_SRC"/*; do
-        cp "$f" "$APP/Contents/Resources/"
-    done
-    shopt -u nullglob
-fi
 
 echo "[4/4] Ad-hoc code signing (required by Gatekeeper for WKWebView XPC)"
 codesign --force --deep --sign - "$APP" >/dev/null
