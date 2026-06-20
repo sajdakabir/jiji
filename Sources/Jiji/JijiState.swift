@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// The Jiji mood, derived purely from the current-session usage percentage.
 enum JijiState: String, CaseIterable {
@@ -29,18 +28,6 @@ enum JijiState: String, CaseIterable {
         return .dead
     }
 
-    /// SF Symbol name used to render this mood in the menu bar and popover.
-    var sfSymbolName: String {
-        switch self {
-        case .chill:   return "moon.zzz.fill"
-        case .alert:   return "eye"
-        case .sideEye: return "eye.trianglebadge.exclamationmark"
-        case .worried: return "exclamationmark.triangle"
-        case .panic:   return "exclamationmark.triangle.fill"
-        case .dead:    return "xmark.octagon.fill"
-        }
-    }
-
     /// Short human-readable caption for this mood.
     var caption: String {
         switch self {
@@ -50,19 +37,6 @@ enum JijiState: String, CaseIterable {
         case .worried: return "Worried"
         case .panic:   return "Panic"
         case .dead:    return "Done"
-        }
-    }
-
-    /// Tint applied to the cat SF Symbol — escalates from neutral through
-    /// orange/red as usage climbs, with a faded gray for the spent state.
-    var tint: Color {
-        switch self {
-        case .chill:   return .primary
-        case .alert:   return .primary
-        case .sideEye: return .yellow
-        case .worried: return .orange
-        case .panic:   return .red
-        case .dead:    return .gray
         }
     }
 }
