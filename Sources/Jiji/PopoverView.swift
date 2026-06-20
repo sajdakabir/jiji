@@ -31,44 +31,39 @@ struct PopoverView: View {
 
     // MARK: - Header
 
+    /// Title-only header. The animated cat lives in the menu bar, not here.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Walking strip stretches across the full popover width so the
-            // cat has room to pace. Height matches the previous 64pt cat.
-            JijiWalkStrip(state: store.state, height: 64)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Jiji")
-                    .font(.headline)
-                Text(store.state.caption)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
+        Text("Jiji")
+            .font(.headline)
     }
 
     // MARK: - Body
 
     private var body_section: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 12) {
             if store.isLoggedIn == false {
                 Text("Not signed in")
                     .font(.subheadline)
                     .foregroundStyle(.orange)
             }
 
-            HStack {
-                Text("Current session:")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(percentText)
-                    .font(.system(.body, design: .monospaced))
-            }
+            metricRow(
+                title: "Current session",
+                percent: store.sessionPercent,
+                reset: store.resetText
+            )
 
-            if let reset = store.resetText, !reset.isEmpty {
-                Text(reset)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            metricRow(
+                title: "Weekly (all models)",
+                percent: store.weeklyAllModelsPercent,
+                reset: store.weeklyAllModelsResetText
+            )
+
+            metricRow(
+                title: "Weekly (Sonnet only)",
+                percent: store.weeklySonnetPercent,
+                reset: store.weeklySonnetResetText
+            )
 
             Text("Last updated: \(lastUpdatedText)")
                 .font(.footnote)
@@ -83,11 +78,29 @@ struct PopoverView: View {
         }
     }
 
-    private var percentText: String {
-        if let p = store.sessionPercent {
-            return "\(Int(p.rounded()))%"
+    /// One metric row: label + right-aligned percentage, with the reset text
+    /// in a smaller footnote underneath.
+    @ViewBuilder
+    private func metricRow(title: String, percent: Double?, reset: String?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(percentText(percent))
+                    .font(.system(.body, design: .monospaced))
+            }
+            if let r = reset, !r.isEmpty {
+                Text(r)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
-        return "Unknown"
+    }
+
+    private func percentText(_ percent: Double?) -> String {
+        guard let p = percent else { return "Unknown" }
+        return "\(Int(p.rounded()))%"
     }
 
     private var lastUpdatedText: String {
