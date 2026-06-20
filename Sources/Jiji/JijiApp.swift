@@ -24,6 +24,6 @@ private struct MenuBarIconLabel: View {
     @ObservedObject var store: UsageStore
 
     var body: some View {
-        JijiCatIcon(state: store.state)
+        JijiCat(size: 18)
     }
 }
