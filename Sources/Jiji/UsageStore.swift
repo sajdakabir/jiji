@@ -15,6 +15,18 @@ final class UsageStore: ObservableObject {
     /// `nil` when no reset text was found.
     @Published var resetText: String? = nil
 
+    /// Weekly all-models usage as a percentage in 0...100. `nil` when unknown.
+    @Published var weeklyAllModelsPercent: Double? = nil
+
+    /// Human-readable reset string for the weekly all-models metric.
+    @Published var weeklyAllModelsResetText: String? = nil
+
+    /// Weekly Sonnet-only usage as a percentage in 0...100. `nil` when unknown.
+    @Published var weeklySonnetPercent: Double? = nil
+
+    /// Human-readable reset string for the weekly Sonnet-only metric.
+    @Published var weeklySonnetResetText: String? = nil
+
     /// Timestamp of the last successful (or attempted) refresh.
     @Published var lastUpdated: Date? = nil
 
@@ -25,6 +37,14 @@ final class UsageStore: ObservableObject {
     /// Most recent error message, if any. `nil` clears the error state.
     @Published var lastError: String? = nil
 
-    /// Derived Jiji state based on the current session percentage.
-    var state: JijiState { JijiState.from(percent: sessionPercent) }
+    /// Derived Jiji state based on the MAX of session and weekly all-models
+    /// percentages so the menu bar icon escalates with whichever metric is
+    /// most pressing.
+    var state: JijiState {
+        let candidates = [sessionPercent, weeklyAllModelsPercent].compactMap { $0 }
+        guard let worst = candidates.max() else {
+            return JijiState.from(percent: nil)
+        }
+        return JijiState.from(percent: worst)
+    }
 }
