@@ -30,6 +30,23 @@ struct JijiCat: View {
     @State private var wagPhase: Double = 0
 
     var body: some View {
+        Group {
+            // In .chill, if the user has dropped a `chill_cat.lottie`
+            // (or .json) into Sources/Jiji/Resources/, play it via the
+            // dotlottie-wc web component. Otherwise fall through to the
+            // SF Symbol cat below so the app still works without assets.
+            if state == .chill, let url = Self.chillLottieURL {
+                JijiLottieWebView(lottieURL: url)
+                    .frame(width: size, height: size)
+            } else {
+                sfSymbolCat
+            }
+        }
+        .task(id: state) { startAnimations() }
+    }
+
+    /// SF Symbol-based fallback (and the body for non-chill states).
+    private var sfSymbolCat: some View {
         Image(systemName: "cat.fill")
             .resizable()
             .scaledToFit()
@@ -41,7 +58,15 @@ struct JijiCat: View {
             .rotationEffect(.degrees(stateRotation))
             .offset(x: shakeOffset, y: bobOffset)
             .opacity(state == .dead ? 0.55 : 1.0)
-            .task(id: state) { startAnimations() }
+    }
+
+    /// Resolves the bundled chill-state Lottie file, if the user dropped
+    /// one in. Prefers `.lottie` (compressed) over `.json`. `build-app.sh`
+    /// copies anything in `Sources/Jiji/Resources/` into the .app bundle's
+    /// Resources directory, where `Bundle.main` can find it.
+    private static var chillLottieURL: URL? {
+        Bundle.main.url(forResource: "chill_cat", withExtension: "lottie")
+            ?? Bundle.main.url(forResource: "chill_cat", withExtension: "json")
     }
 
     // MARK: - Per-state geometry
