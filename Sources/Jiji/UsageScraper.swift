@@ -30,62 +30,89 @@ final class UsageScraper: NSObject, ObservableObject, WKNavigationDelegate {
     /// Read-only DOM scraping script. **MUST** remain a single static string
     /// literal with no interpolation, per the security review.
     ///
-    /// Returns `JSON.stringify({percent: number, resetText: string|null})` on
-    /// success, or `null` while the page hasn't rendered the expected row yet.
+    /// Returns `JSON.stringify({
+    ///   current:      {percent: number, resetText: string|null} | null,
+    ///   weeklyAll:    {percent: number, resetText: string|null} | null,
+    ///   weeklySonnet: {percent: number, resetText: string|null} | null
+    /// })` on success, or `null` while the page hasn't rendered any of the
+    /// expected rows yet.
     private static let scrapeJS: String = """
     (function() {
       try {
-        var needle = 'current session';
-        var all = document.querySelectorAll('body *');
-        var label = null;
-        for (var i = 0; i < all.length; i++) {
-          var el = all[i];
-          if (!el || !el.textContent) continue;
-          var t = el.textContent.toLowerCase();
-          if (t.indexOf(needle) === -1) continue;
-          // Prefer the deepest element that contains the needle to avoid the <body>.
-          var hasChildMatch = false;
-          for (var j = 0; j < el.children.length; j++) {
-            var c = el.children[j];
-            if (c && c.textContent && c.textContent.toLowerCase().indexOf(needle) !== -1) {
-              hasChildMatch = true;
-              break;
-            }
-          }
-          if (!hasChildMatch) { label = el; break; }
-        }
-        if (!label) return null;
-
-        // Walk up looking for a container that also holds a percent token.
         var percentRe = /(\\d{1,3})\\s*%/;
+        var resetStartRe = /resets?\\s/i;
+        var resetStopRe = /\\d{1,3}\\s*%|[\\n\\r]/;
 
-        var container = label;
-        var match = null;
-        for (var k = 0; k < 8 && container; k++) {
-          var txt = container.textContent || '';
-          var m = txt.match(percentRe);
-          if (m) { match = m; break; }
-          container = container.parentElement;
-        }
-        if (!match || !container) return null;
-
-        var pct = parseInt(match[1], 10);
-        if (isNaN(pct)) return null;
-        if (pct < 0) pct = 0;
-        if (pct > 100) pct = 100;
-
-        var containerText = container.textContent || '';
-        var resetIdx = containerText.search(/resets?\\s/i);
-        var resetText = null;
-        if (resetIdx >= 0) {
-          var rest = containerText.slice(resetIdx);
-          // Stop before the next "<digits>%" token or any newline so we don't
-          // slurp trailing "NN% used" text that follows the reset descriptor.
-          var stopIdx = rest.search(/\\d{1,3}\\s*%|[\\n\\r]/);
-          resetText = (stopIdx > 0 ? rest.slice(0, stopIdx) : rest).replace(/\\s+/g, ' ').trim();
+        function findLabel(needle) {
+          var all = document.querySelectorAll('body *');
+          for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            if (!el || !el.textContent) continue;
+            var t = el.textContent.toLowerCase();
+            if (t.indexOf(needle) === -1) continue;
+            // Prefer the deepest element that contains the needle to avoid
+            // matching the <body> itself.
+            var hasChildMatch = false;
+            for (var j = 0; j < el.children.length; j++) {
+              var c = el.children[j];
+              if (c && c.textContent && c.textContent.toLowerCase().indexOf(needle) !== -1) {
+                hasChildMatch = true;
+                break;
+              }
+            }
+            if (!hasChildMatch) return el;
+          }
+          return null;
         }
 
-        return JSON.stringify({ percent: pct, resetText: resetText });
+        function extractMetric(needle) {
+          var label = findLabel(needle);
+          if (!label) return null;
+
+          // Walk up to find a container that also contains a percent token.
+          var container = label;
+          var match = null;
+          for (var k = 0; k < 8 && container; k++) {
+            var txt = container.textContent || '';
+            var m = txt.match(percentRe);
+            if (m) { match = m; break; }
+            container = container.parentElement;
+          }
+          if (!match || !container) return null;
+
+          var pct = parseInt(match[1], 10);
+          if (isNaN(pct)) return null;
+          if (pct < 0) pct = 0;
+          if (pct > 100) pct = 100;
+
+          var containerText = container.textContent || '';
+          var resetIdx = containerText.search(resetStartRe);
+          var resetText = null;
+          if (resetIdx >= 0) {
+            var rest = containerText.slice(resetIdx);
+            // Truncate before the next "<digits>%" token or newline so we
+            // don't slurp the next metric's text or trailing "NN% used".
+            // Also cap absolute length to 80 chars as a defensive bound.
+            var stopIdx = rest.search(resetStopRe);
+            var slice = stopIdx > 0 ? rest.slice(0, stopIdx) : rest;
+            if (slice.length > 80) slice = slice.slice(0, 80);
+            resetText = slice.replace(/\\s+/g, ' ').trim();
+          }
+
+          return { percent: pct, resetText: resetText };
+        }
+
+        var current = extractMetric('current session');
+        var weeklyAll = extractMetric('all models');
+        var weeklySonnet = extractMetric('sonnet only');
+
+        if (!current && !weeklyAll && !weeklySonnet) return null;
+
+        return JSON.stringify({
+          current: current,
+          weeklyAll: weeklyAll,
+          weeklySonnet: weeklySonnet
+        });
       } catch (e) {
         return null;
       }
@@ -207,10 +234,28 @@ final class UsageScraper: NSObject, ObservableObject, WKNavigationDelegate {
         }
     }
 
+    /// One parsed metric row from the scrape JSON.
+    private struct Metric {
+        let percent: Double
+        let resetText: String?
+    }
+
+    /// All three metrics returned by a single scrape pass. Any field may be
+    /// `nil` when that row was not present on the page.
+    private struct ScrapeResult {
+        let current: Metric?
+        let weeklyAll: Metric?
+        let weeklySonnet: Metric?
+
+        var hasAnyMetric: Bool {
+            current != nil || weeklyAll != nil || weeklySonnet != nil
+        }
+    }
+
     /// Runs the static scraping script once. Returns `nil` if the DOM isn't
     /// ready or the script returned `null` / an unexpected shape.
-    private func evaluateScrape() async -> (percent: Double, resetText: String?)? {
-        await withCheckedContinuation { (cont: CheckedContinuation<(percent: Double, resetText: String?)?, Never>) in
+    private func evaluateScrape() async -> ScrapeResult? {
+        await withCheckedContinuation { (cont: CheckedContinuation<ScrapeResult?, Never>) in
             self.webView.evaluateJavaScript(Self.scrapeJS) { value, _ in
                 guard let str = value as? String,
                       let data = str.data(using: .utf8),
@@ -219,25 +264,56 @@ final class UsageScraper: NSObject, ObservableObject, WKNavigationDelegate {
                     cont.resume(returning: nil)
                     return
                 }
-                let pct: Double?
-                if let n = json["percent"] as? Double { pct = n }
-                else if let n = json["percent"] as? Int { pct = Double(n) }
-                else if let n = json["percent"] as? NSNumber { pct = n.doubleValue }
-                else { pct = nil }
 
-                guard let percent = pct else {
+                func parseMetric(_ key: String) -> Metric? {
+                    guard let dict = json[key] as? [String: Any] else { return nil }
+                    let pct: Double?
+                    if let n = dict["percent"] as? Double { pct = n }
+                    else if let n = dict["percent"] as? Int { pct = Double(n) }
+                    else if let n = dict["percent"] as? NSNumber { pct = n.doubleValue }
+                    else { pct = nil }
+                    guard let percent = pct else { return nil }
+                    let resetText = dict["resetText"] as? String
+                    return Metric(percent: percent, resetText: resetText)
+                }
+
+                let result = ScrapeResult(
+                    current: parseMetric("current"),
+                    weeklyAll: parseMetric("weeklyAll"),
+                    weeklySonnet: parseMetric("weeklySonnet")
+                )
+
+                guard result.hasAnyMetric else {
                     cont.resume(returning: nil)
                     return
                 }
-                let resetText = json["resetText"] as? String
-                cont.resume(returning: (percent, resetText))
+                cont.resume(returning: result)
             }
         }
     }
 
-    private func applyScrapeResult(_ result: (percent: Double, resetText: String?)) {
-        store.sessionPercent = max(0, min(100, result.percent))
-        store.resetText = result.resetText
+    private func applyScrapeResult(_ result: ScrapeResult) {
+        if let m = result.current {
+            store.sessionPercent = max(0, min(100, m.percent))
+            store.resetText = m.resetText
+        } else {
+            store.sessionPercent = nil
+            store.resetText = nil
+        }
+        if let m = result.weeklyAll {
+            store.weeklyAllModelsPercent = max(0, min(100, m.percent))
+            store.weeklyAllModelsResetText = m.resetText
+        } else {
+            store.weeklyAllModelsPercent = nil
+            store.weeklyAllModelsResetText = nil
+        }
+        if let m = result.weeklySonnet {
+            store.weeklySonnetPercent = max(0, min(100, m.percent))
+            store.weeklySonnetResetText = m.resetText
+        } else {
+            store.weeklySonnetPercent = nil
+            store.weeklySonnetResetText = nil
+        }
     }
 
     // MARK: - WKNavigationDelegate
