@@ -43,6 +43,15 @@
                 <key>NSExceptionRequiresForwardSecrecy</key>
                 <true/>
             </dict>
+            <key>unpkg.com</key>
+            <dict>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSExceptionRequiresForwardSecrecy</key>
+                <true/>
+            </dict>
         </dict>
     </dict>
 </dict>
