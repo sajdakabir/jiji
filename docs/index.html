@@ -1,119 +1,678 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jiji</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Jiji — your claude.ai usage, in the menu bar</title>
+<meta name="description" content="Jiji is a tiny native macOS menu bar app that shows your claude.ai usage: current session, weekly all-models, and weekly Sonnet. Free and open source.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%90%B1%3C/text%3E%3C/svg%3E">
 <style>
-  * {
-    box-sizing: border-box;
+  :root{
+    --bg:#0a0a0b;
+    --bg-soft:#0f0f12;
+    --panel:#131318;
+    --panel-2:#17171d;
+    --line:#26262e;
+    --line-soft:#1c1c22;
+    --ink:#f4f3f0;
+    --ink-2:#b9b8b3;
+    --ink-3:#86857f;
+    --ink-4:#5b5a55;
+    --accent:#e8a87c;       /* warm cat amber */
+    --accent-ink:#0a0a0b;
+    --good:#9bd4a4;
+    --bar-track:#23232b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --maxw: 1080px;
+    --radius:14px;
   }
-  html, body {
-    margin: 0;
-    padding: 0;
+  :root[data-theme="light"]{
+    --bg:#f7f6f2;
+    --bg-soft:#efeee8;
+    --panel:#ffffff;
+    --panel-2:#faf9f5;
+    --line:#e2e0d8;
+    --line-soft:#ece9e0;
+    --ink:#16151a;
+    --ink-2:#45433d;
+    --ink-3:#6f6d66;
+    --ink-4:#9c9a92;
+    --accent:#b96a2f;
+    --accent-ink:#fffaf4;
+    --good:#3b8a52;
+    --bar-track:#e7e4da;
   }
-  body {
-    background: #0a0a0a;
-    color: #e8e8e8;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
-    line-height: 1.6;
-    font-size: 16px;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.6;
+    font-size:17px;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
   }
-  .container {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 80px 24px 60px;
+  body::before{
+    /* faint top glow, draws the eye to the hero */
+    content:"";
+    position:fixed;
+    inset:0 0 auto 0;
+    height:60vh;
+    background:radial-gradient(60% 100% at 50% 0%, rgba(232,168,124,.06), transparent 70%);
+    pointer-events:none;
+    z-index:0;
   }
-  h1 {
-    font-size: 48px;
-    font-weight: 600;
-    margin: 0 0 12px;
-    letter-spacing: -0.02em;
+  a{color:inherit}
+  img{max-width:100%}
+  h1,h2,h3{font-weight:600;letter-spacing:-.02em;line-height:1.08;margin:0}
+  p{margin:0}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+  /* skip link */
+  .skip{
+    position:absolute;left:16px;top:-60px;z-index:50;
+    background:var(--accent);color:var(--accent-ink);
+    padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;
+    transition:top .15s ease;
   }
-  h2 {
-    font-size: 22px;
-    font-weight: 600;
-    margin: 48px 0 16px;
-    letter-spacing: -0.01em;
+  .skip:focus{top:16px}
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky;top:0;z-index:20;
+    backdrop-filter:saturate(140%) blur(10px);
+    -webkit-backdrop-filter:saturate(140%) blur(10px);
+    background:color-mix(in srgb, var(--bg) 78%, transparent);
+    border-bottom:1px solid var(--line-soft);
   }
-  p {
-    margin: 0 0 16px;
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;max-width:var(--maxw);margin:0 auto}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-.01em;font-size:18px}
+  .brand .cat{font-size:20px;line-height:1}
+  .nav-actions{display:flex;align-items:center;gap:8px}
+  .ghost{
+    font-size:14px;color:var(--ink-2);text-decoration:none;
+    padding:8px 12px;border-radius:10px;border:1px solid transparent;
   }
-  .tagline {
-    color: #888;
-    font-size: 18px;
-    margin-bottom: 32px;
+  .ghost:hover{color:var(--ink);background:var(--panel)}
+  .theme-toggle{
+    appearance:none;cursor:pointer;background:transparent;color:var(--ink-2);
+    border:1px solid var(--line);border-radius:10px;font-size:15px;
+    width:38px;height:38px;line-height:1;display:inline-flex;align-items:center;justify-content:center;
   }
-  ul, ol {
-    padding-left: 22px;
-    margin: 0 0 16px;
+  .theme-toggle:hover{color:var(--ink);border-color:var(--ink-4)}
+  .no-js .theme-toggle{display:none}
+
+  /* ---------- hero ---------- */
+  .hero{padding:84px 0 56px}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-3);margin-bottom:26px;
   }
-  li {
-    margin-bottom: 8px;
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+  .hero h1{
+    font-size:clamp(2.35rem, 7.5vw, 5rem);
+    letter-spacing:-.035em;
+    max-width:16ch;
+    overflow-wrap:break-word;
+    hyphens:none;
   }
-  a {
-    color: #e8e8e8;
+  .hero h1 .soft{color:var(--ink-3)}
+  .lede{
+    margin-top:26px;
+    font-size:clamp(1.05rem,2.4vw,1.3rem);
+    color:var(--ink-2);
+    max-width:54ch;
   }
-  .download {
-    display: inline-block;
-    background: #ffffff;
-    color: #000000;
-    text-decoration: none;
-    padding: 12px 18px;
-    border-radius: 8px;
-    font-weight: 500;
-    font-size: 15px;
-    margin-bottom: 8px;
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .hairline{height:1px;background:linear-gradient(90deg,var(--accent),transparent);border:0;margin:0}
+  .hairline.full{background:var(--line-soft)}
+
+  .cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:34px}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    text-decoration:none;font-weight:600;font-size:16px;
+    border-radius:12px;padding:14px 22px;line-height:1;
+    transition:transform .08s ease, box-shadow .2s ease, background .2s ease;
   }
-  .download:hover {
-    background: #e8e8e8;
+  .btn-primary{
+    background:var(--accent);color:var(--accent-ink);
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset, 0 8px 30px -12px var(--accent);
   }
-  footer {
-    margin-top: 64px;
-    padding-top: 24px;
-    border-top: 1px solid #1f1f1f;
-    color: #888;
-    font-size: 14px;
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-primary:active{transform:translateY(0)}
+  .btn-primary:focus-visible{
+    outline:3px solid var(--ink);
+    outline-offset:3px;
   }
-  footer a {
-    color: #888;
+  .btn-secondary{
+    color:var(--ink);border:1px solid var(--line);background:var(--panel);
   }
-  footer a:hover {
-    color: #e8e8e8;
+  .btn-secondary:hover{border-color:var(--ink-4)}
+  .btn-secondary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .cta .fineprint{font-size:13.5px;color:var(--ink-3);font-family:var(--mono)}
+
+  /* ---------- product mock ---------- */
+  .stage{
+    margin-top:64px;
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(232,168,124,.08), transparent 60%),
+      linear-gradient(180deg, var(--bg-soft), var(--bg));
+    border:1px solid var(--line-soft);
+    border-radius:22px;
+    padding:0;
+    position:relative;
+    overflow:hidden;
+  }
+  /* the desktop "wallpaper" framing */
+  .desktop{
+    padding:0 22px 64px;
+    position:relative;
+  }
+  /* macOS menu bar strip — real status items live on the RIGHT */
+  .menubar{
+    display:flex;align-items:center;justify-content:flex-end;gap:16px;
+    height:30px;padding:0 14px;margin:0 -22px 0;
+    background:color-mix(in srgb,#000 26%, var(--panel));
+    border-bottom:1px solid var(--line);
+    color:var(--ink-2);
+    font-size:13px;
+    position:relative;
+  }
+  :root[data-theme="light"] .menubar{background:rgba(255,255,255,.7)}
+  .menubar .sys{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .menubar .sys .ico{display:inline-flex;align-items:center;color:var(--ink-2)}
+  .menubar .sys .ico svg{display:block;width:15px;height:15px;fill:currentColor}
+  .menubar .clock{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  /* the Jiji item: highlighted (popover open), in the right-side status cluster */
+  .menubar .jiji{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:4px 9px;border-radius:7px;
+    background:var(--accent);color:var(--accent-ink);
+    font-weight:600;font-size:13px;
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 60%,#000);
+  }
+  .menubar .jiji .cat{font-size:14px;line-height:1}
+  .menubar .jiji .pct{font-family:var(--mono);font-size:12px;opacity:.85}
+
+  /* the popover — aligned under the Jiji item on the right */
+  .popover{
+    width:min(330px,100%);
+    margin-top:12px;margin-left:auto;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:0 30px 70px -30px rgba(0,0,0,.7), 0 2px 0 rgba(255,255,255,.03) inset;
+    position:relative;
+    overflow:hidden;
+  }
+  /* little pointer arrow connecting popover to menu bar item (right side) */
+  .popover::before{
+    content:"";position:absolute;top:-7px;right:80px;left:auto;
+    width:12px;height:12px;background:var(--panel);
+    border-left:1px solid var(--line);border-top:1px solid var(--line);
+    transform:rotate(45deg);
+  }
+  .pop-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 12px;border-bottom:1px solid var(--line-soft);
+  }
+  .pop-head .title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+  .pop-head .title .cat{font-size:15px}
+  .pop-head .updated{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+  .pop-body{padding:6px 16px 14px}
+
+  .metric{padding:13px 0;border-bottom:1px solid var(--line-soft)}
+  .metric:last-child{border-bottom:0}
+  .metric .row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .metric .name{font-size:13.5px;color:var(--ink-2);font-weight:500}
+  .metric .val{font-family:var(--mono);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .bar{
+    height:7px;border-radius:99px;background:var(--bar-track);
+    margin:9px 0 7px;overflow:hidden;
+  }
+  .bar > span{
+    display:block;height:100%;border-radius:99px;
+    background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 70%, #fff 0%), var(--accent));
+  }
+  .metric.zero .val{color:var(--good)}
+  .metric.zero .bar > span{background:var(--good)}
+  .metric .reset{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);letter-spacing:.01em}
+
+  /* widths drawn by CSS only */
+  .w-session > span{width:11%}
+  .w-weekall > span{width:39%}
+  /* true zero: no fill at all, but mark the empty track so it never reads as ~2% used */
+  .bar.zero{
+    background:var(--bar-track);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 45%, transparent);
+  }
+  .bar.zero > span{width:0}
+  .metric.zero .val::after{
+    content:" · none used";
+    font-size:11px;color:var(--good);font-weight:400;letter-spacing:0;
+  }
+
+  .stage-cap{
+    text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink-4);
+    letter-spacing:.05em;padding:0 22px 22px;
+  }
+
+  /* ---------- sections ---------- */
+  section{padding:72px 0}
+  .sec-head{margin-bottom:34px;max-width:60ch}
+  .sec-kicker{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:14px}
+  .sec-head h2{font-size:clamp(1.7rem,4.2vw,2.5rem)}
+  .sec-head p{color:var(--ink-2);margin-top:14px;font-size:1.05rem}
+
+  /* metrics explainer grid */
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .card{
+    background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:22px 22px 24px;
+  }
+  .card .big{font-family:var(--mono);font-size:30px;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+  .card.zero .big{color:var(--good)}
+  .card h3{font-size:1.02rem;margin-top:10px}
+  .card p{color:var(--ink-3);font-size:14.5px;margin-top:8px}
+  .card .reset{font-family:var(--mono);font-size:12px;color:var(--ink-4);margin-top:14px;display:block;border-top:1px solid var(--line-soft);padding-top:12px}
+
+  /* feature list */
+  .features{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:var(--radius);overflow:hidden}
+  .feature{background:var(--panel);padding:24px}
+  .feature h3{font-size:1.05rem;display:flex;align-items:center;gap:10px}
+  .feature h3 .g{
+    width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--panel-2);border:1px solid var(--line);font-size:15px;flex:none;
+  }
+  .feature p{color:var(--ink-3);font-size:14.5px;margin-top:12px}
+
+  /* install steps */
+  .steps{list-style:none;margin:0;padding:0;counter-reset:step;display:grid;gap:14px}
+  .steps li{
+    display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;
+    background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .steps li::before{
+    counter-increment:step;content:counter(step);
+    font-family:var(--mono);font-size:14px;font-weight:600;
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:var(--accent);color:var(--accent-ink);
+  }
+  .steps li .st-title{font-weight:600;font-size:15px}
+  .steps li .st-desc{color:var(--ink-3);font-size:14px;margin-top:4px}
+  .steps code{
+    font-family:var(--mono);font-size:.88em;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--ink);
+  }
+  .note{
+    margin-top:18px;display:flex;gap:12px;align-items:flex-start;
+    background:color-mix(in srgb,var(--accent) 9%, var(--panel));
+    border:1px solid color-mix(in srgb,var(--accent) 30%, var(--line));
+    border-radius:var(--radius);padding:16px 18px;
+  }
+  .note .g{font-size:18px;line-height:1.4}
+  .note p{font-size:14px;color:var(--ink-2)}
+  .note strong{color:var(--ink)}
+
+  /* requirements */
+  .req{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .req .item{border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;background:var(--panel)}
+  .req .item .k{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4)}
+  .req .item .v{font-size:1.05rem;margin-top:8px;color:var(--ink);font-weight:600}
+  .req .item .vs{color:var(--ink-3);font-weight:400;font-size:14px;display:block;margin-top:4px}
+
+  /* final CTA */
+  .final{
+    text-align:center;
+    background:linear-gradient(180deg,var(--bg-soft),var(--bg));
+    border:1px solid var(--line-soft);border-radius:22px;
+    padding:64px 28px;margin-bottom:24px;
+  }
+  .final .cat-big{font-size:46px;line-height:1;display:block;margin-bottom:18px}
+  .final h2{font-size:clamp(1.8rem,5vw,2.7rem);max-width:18ch;margin:0 auto}
+  .final p{color:var(--ink-2);margin:16px auto 0;max-width:46ch}
+  .final .cta{justify-content:center}
+
+  /* footer */
+  footer{border-top:1px solid var(--line-soft);padding:36px 0 56px;margin-top:24px}
+  .foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
+  .foot .brand{font-size:16px}
+  .foot nav{display:flex;gap:18px;flex-wrap:wrap}
+  .foot a{color:var(--ink-3);text-decoration:none;font-size:14px}
+  .foot a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+  .foot .meta{color:var(--ink-4);font-size:13px;font-family:var(--mono)}
+
+  :where(a,button):focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:860px){
+    .grid-3{grid-template-columns:1fr}
+    .features{grid-template-columns:1fr}
+    .req{grid-template-columns:1fr}
+  }
+  @media (max-width:600px){
+    body{font-size:16px}
+    .hero{padding:54px 0 40px}
+    section{padding:54px 0}
+    .nav .ghost.hide-sm{display:none}
+    .stage{margin-top:44px}
+    .desktop{padding:0 14px 48px}
+    .menubar{margin:0 -14px 0;gap:9px;flex-wrap:nowrap;padding:0 10px;overflow:hidden}
+    .menubar .sys{gap:9px}
+    .menubar .sys .ico svg{width:14px;height:14px}
+    .menubar .clock{white-space:nowrap}
+    .cta{gap:12px}
+    .btn{width:100%;justify-content:center}
+    .cta .fineprint{width:100%;text-align:center}
+  }
+  @media (max-width:380px){
+    .menubar .clock{display:none}
+    /* clock hidden → Jiji item is now rightmost; move arrow under it */
+    .popover::before{right:24px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;scroll-behavior:auto !important}
   }
 </style>
 </head>
-<body>
-  <div class="container">
-    <h1>Jiji</h1>
-    <p class="tagline">Track your claude.ai usage from your macOS menu bar.</p>
+<body class="no-js">
+<a class="skip" href="#main">Skip to content</a>
 
-    <a class="download" href="https://github.com/sajdakabir/jiji/releases/latest">Download for macOS</a>
-
-    <h2>What it does</h2>
-    <ul>
-      <li>Live percentage of your current claude.ai session</li>
-      <li>Weekly usage for all models and Sonnet only</li>
-      <li>Reset times so you know when your quota refreshes</li>
-      <li>Native macOS menu bar app &mdash; no Dock icon, no fuss</li>
-    </ul>
-
-    <h2>Install</h2>
-    <ol>
-      <li>Download the .dmg above</li>
-      <li>Open it, drag Jiji.app into Applications</li>
-      <li>Launch Jiji from Launchpad or Spotlight</li>
-      <li>Sign in to claude.ai when the login window appears</li>
-    </ol>
-
-    <h2>Requirements</h2>
-    <p>macOS 13 (Ventura) or newer, an active claude.ai login.</p>
-
-    <footer>
-      <a href="https://github.com/sajdakabir/jiji">View on GitHub</a>
-    </footer>
+<header>
+  <div class="nav">
+    <a class="brand" href="#top" aria-label="Jiji home">
+      <span class="cat" aria-hidden="true">🐱</span>
+      <span>Jiji</span>
+    </a>
+    <div class="nav-actions">
+      <a class="ghost hide-sm" href="#install">Install</a>
+      <a class="ghost" href="https://github.com/sajdakabir/jiji" rel="noopener noreferrer">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle light and dark theme" title="Toggle theme" data-theme-toggle>◐</button>
+    </div>
   </div>
+</header>
+
+<main id="main">
+  <span id="top"></span>
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <span class="eyebrow"><span class="dot" aria-hidden="true"></span> Native macOS menu bar app</span>
+      <h1 id="hero-title">Your claude.ai usage,<br><span class="soft">right in the menu bar.</span></h1>
+      <hr class="hairline" style="margin:30px 0 0;max-width:120px" aria-hidden="true">
+      <p class="lede">Jiji is a tiny cat that lives in your menu bar. Click it for a glance at your
+        <strong>session</strong> and <strong>weekly</strong> limits — percent used and when each one resets. No Dock icon, no fuss.</p>
+
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/sajdakabir/jiji/releases/latest" rel="noopener noreferrer">
+          <span aria-hidden="true">⬇</span> Download for macOS
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/sajdakabir/jiji" rel="noopener noreferrer">View on GitHub</a>
+        <span class="fineprint">Free · Open source · .dmg</span>
+      </div>
+
+      <!-- PRODUCT MOCK (CSS only) -->
+      <div class="stage" role="group" aria-label="Preview of the Jiji menu bar popover">
+        <div class="desktop">
+          <div class="menubar" aria-hidden="true">
+            <span class="sys">
+              <span class="ico" title="Wi-Fi"><svg viewBox="0 0 24 24"><path d="M12 18.5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm0-4.7c-1.6 0-3.1.6-4.2 1.7l1.6 1.6a3.7 3.7 0 0 1 5.2 0l1.6-1.6A5.9 5.9 0 0 0 12 13.8Zm0-4.6a10.3 10.3 0 0 0-7.3 3l1.6 1.6a8 8 0 0 1 11.4 0l1.6-1.6A10.3 10.3 0 0 0 12 9.2Zm0-4.6A14.9 14.9 0 0 0 1.4 9l1.6 1.6a12.6 12.6 0 0 1 18 0L22.6 9A14.9 14.9 0 0 0 12 4.6Z"/></svg></span>
+              <span class="ico" title="Battery"><svg viewBox="0 0 24 24"><path d="M3 8.5h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2Zm0 1.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h14a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5H3Zm1 1h11v2H4v-2Zm16-.5h.5a1.5 1.5 0 0 1 0 3H20v-3Z"/></svg></span>
+              <span class="ico" title="Search"><svg viewBox="0 0 24 24"><path d="M10.5 3a7.5 7.5 0 0 1 5.92 12.1l4.24 4.25-1.32 1.32-4.25-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg></span>
+              <span class="ico" title="Control Center"><svg viewBox="0 0 24 24"><path d="M6 4h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Zm0 1.5A1.5 1.5 0 0 0 4.5 7v10A1.5 1.5 0 0 0 6 18.5h12a1.5 1.5 0 0 0 1.5-1.5V7A1.5 1.5 0 0 0 18 5.5H6Zm4 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm4 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></svg></span>
+            </span>
+            <span class="jiji"><span class="cat">🐱</span><span class="pct">11%</span></span>
+            <span class="clock">Fri 9:41&nbsp;PM</span>
+          </div>
+
+          <div class="popover" role="img"
+               aria-label="Jiji popover showing three usage metrics. Current session: 11 percent used, resets in 4 hours 40 minutes. Weekly, all models: 39 percent used, resets Sunday 8:30 PM. Weekly, Sonnet only: 0 percent used, none used yet, resets Sunday 8:30 PM.">
+            <div class="pop-head">
+              <span class="title"><span class="cat" aria-hidden="true">🐱</span> Jiji</span>
+              <span class="updated">updated 38s ago</span>
+            </div>
+            <div class="pop-body">
+
+              <div class="metric">
+                <div class="row">
+                  <span class="name">Current session</span>
+                  <span class="val">11%</span>
+                </div>
+                <div class="bar w-session"><span></span></div>
+                <span class="reset">Resets in 4 hr 40 min</span>
+              </div>
+
+              <div class="metric">
+                <div class="row">
+                  <span class="name">Weekly · all models</span>
+                  <span class="val">39%</span>
+                </div>
+                <div class="bar w-weekall"><span></span></div>
+                <span class="reset">Resets Sun 8:30 PM</span>
+              </div>
+
+              <div class="metric zero">
+                <div class="row">
+                  <span class="name">Weekly · Sonnet only</span>
+                  <span class="val">0%</span>
+                </div>
+                <div class="bar zero"><span></span></div>
+                <span class="reset">Resets Sun 8:30 PM</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <p class="stage-cap">A click away, refreshed about once a minute.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT THE NUMBERS MEAN -->
+  <section aria-labelledby="metrics-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-kicker">Three numbers</span>
+        <h2 id="metrics-title">Everything in one popover.</h2>
+        <p>Jiji reads your claude.ai usage page and shows the three limits that matter — each with how much you've used and exactly when it resets.</p>
+      </div>
+      <div class="grid-3">
+        <article class="card">
+          <div class="big">11%</div>
+          <h3>Current session</h3>
+          <p>Your rolling 5-hour window. Watch it climb as you work.</p>
+          <span class="reset">Resets in 4 hr 40 min</span>
+        </article>
+        <article class="card">
+          <div class="big">39%</div>
+          <h3>Weekly · all models</h3>
+          <p>Your combined weekly allowance across every model.</p>
+          <span class="reset">Resets Sun 8:30 PM</span>
+        </article>
+        <article class="card zero">
+          <div class="big">0%</div>
+          <h3>Weekly · Sonnet only</h3>
+          <p>The separate weekly bucket just for Sonnet.</p>
+          <span class="reset">Resets Sun 8:30 PM</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <hr class="hairline full" aria-hidden="true">
+
+  <!-- WHY -->
+  <section aria-labelledby="why-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-kicker">How it stays out of the way</span>
+        <h2 id="why-title">Small, local, and quiet.</h2>
+      </div>
+      <div class="features">
+        <article class="feature">
+          <h3><span class="g" aria-hidden="true">🐱</span> Just a cat in the bar</h3>
+          <p>No Dock icon and no window to manage — only a small <code>cat.fill</code> glyph up top. Click for the popover, click away to dismiss.</p>
+        </article>
+        <article class="feature">
+          <h3><span class="g" aria-hidden="true">🔒</span> Stays on your Mac</h3>
+          <p>Sign in once through an in-app claude.ai login window. The session cookie stays local. No servers, no API key, no telemetry.</p>
+        </article>
+        <article class="feature">
+          <h3><span class="g" aria-hidden="true">🔄</span> Quietly up to date</h3>
+          <p>Refreshes about once a minute by reading your claude.ai usage page. The percent in the menu bar is always current.</p>
+        </article>
+        <article class="feature">
+          <h3><span class="g" aria-hidden="true">📖</span> Free &amp; open source</h3>
+          <p>The whole thing is on GitHub. Read it, build it, or send a patch — nothing hidden.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <hr class="hairline full" aria-hidden="true">
+
+  <!-- INSTALL -->
+  <section id="install" aria-labelledby="install-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-kicker">Install</span>
+        <h2 id="install-title">Up and running in a minute.</h2>
+      </div>
+      <ol class="steps">
+        <li>
+          <div>
+            <div class="st-title">Download the latest .dmg</div>
+            <div class="st-desc">Grab it from the <a href="https://github.com/sajdakabir/jiji/releases/latest" rel="noopener noreferrer">releases page</a> and open the disk image.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="st-title">Drag Jiji to Applications</div>
+            <div class="st-desc">Move <code>Jiji.app</code> into your <code>Applications</code> folder, as usual.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="st-title">First launch: right-click → Open</div>
+            <div class="st-desc">Jiji is ad-hoc signed (not notarized), so the very first time, right-click the app and choose <strong>Open</strong>, then confirm. After that it opens normally.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="st-title">Sign in to claude.ai once</div>
+            <div class="st-desc">An in-app login window appears. Sign in, and the cat starts showing your usage. Click the menu bar 🐱 any time.</div>
+          </div>
+        </li>
+      </ol>
+
+      <div class="note" role="note">
+        <span class="g" aria-hidden="true">⚠️</span>
+        <p><strong>Why the right-click?</strong> Jiji isn't notarized by Apple, so Gatekeeper asks once. Right-click → <strong>Open</strong> tells macOS you trust it. You only do this on the first launch.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="hairline full" aria-hidden="true">
+
+  <!-- REQUIREMENTS -->
+  <section aria-labelledby="req-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-kicker">Requirements</span>
+        <h2 id="req-title">What you'll need.</h2>
+      </div>
+      <div class="req">
+        <div class="item">
+          <span class="k">Operating system</span>
+          <span class="v">macOS 13 Ventura<span class="vs">…or newer.</span></span>
+        </div>
+        <div class="item">
+          <span class="k">Account</span>
+          <span class="v">An active claude.ai login<span class="vs">Signed in once, in-app.</span></span>
+        </div>
+        <div class="item">
+          <span class="k">Price</span>
+          <span class="v">Free &amp; open source<span class="vs">No accounts, no fees.</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section aria-labelledby="final-title" style="padding-top:24px">
+    <div class="wrap">
+      <div class="final">
+        <span class="cat-big" aria-hidden="true">🐱</span>
+        <h2 id="final-title">Keep an eye on your limits.</h2>
+        <p>A tiny cat, your usage at a glance, and nothing leaving your Mac.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/sajdakabir/jiji/releases/latest" rel="noopener noreferrer">
+            <span aria-hidden="true">⬇</span> Download for macOS
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/sajdakabir/jiji" rel="noopener noreferrer">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="brand" href="#top" aria-label="Jiji home">
+      <span class="cat" aria-hidden="true">🐱</span>
+      <span>Jiji</span>
+    </a>
+    <nav aria-label="Footer">
+      <a href="https://github.com/sajdakabir/jiji/releases/latest" rel="noopener noreferrer">Download</a>
+      <a href="https://github.com/sajdakabir/jiji" rel="noopener noreferrer">Source</a>
+      <a href="#install">Install guide</a>
+    </nav>
+    <span class="meta">Made for macOS · Open source</span>
+  </div>
+</footer>
+
+<script>
+  // Progressive enhancement only. Page is fully usable without this.
+  (function () {
+    var root = document.documentElement;
+    document.body.classList.remove('no-js');
+
+    var STORAGE_KEY = 'jiji-theme';
+    function apply(theme) {
+      root.setAttribute('data-theme', theme);
+      var btn = document.querySelector('[data-theme-toggle]');
+      if (btn) btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+    }
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark') {
+        apply(saved);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        apply('light');
+      }
+    } catch (e) { /* ignore: keep default dark */ }
+
+    var toggle = document.querySelector('[data-theme-toggle]');
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        apply(next);
+        try { localStorage.setItem(STORAGE_KEY, next); } catch (e) {}
+      });
+    }
+  })();
+</script>
 </body>
 </html>
