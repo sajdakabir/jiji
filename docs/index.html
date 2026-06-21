@@ -95,16 +95,9 @@
   /* Product mock */
   .mock-wrap { display: flex; justify-content: center; }
   .mock { width: 100%; max-width: 340px; }
-  .menubar {
-    display: flex; align-items: center;
-    background: #1b1b18; border-radius: 10px 10px 0 0;
-    padding: 8px 13px; font-size: 12px; color: #cfcdc4; font-family: var(--mono);
-  }
-  .menubar .cat { margin-right: auto; font-weight: 700; color: #fff; font-family: var(--sans); font-size: 13px; }
-  .menubar .clock { color: #fff; }
   .popover {
-    background: var(--card); border: 1px solid var(--line); border-top: none;
-    border-radius: 0 0 14px 14px; padding: 16px 16px 14px; text-align: left;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 18px 18px 16px; text-align: left;
     box-shadow: 0 24px 60px -20px rgba(27,27,24,.28), 0 4px 12px rgba(27,27,24,.06);
   }
   .pop-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
@@ -190,10 +183,6 @@
 
       <div class="mock-wrap">
         <div class="mock" aria-hidden="true">
-          <div class="menubar">
-            <span class="cat">Jiji</span>
-            <span class="clock">9:41</span>
-          </div>
           <div class="popover">
             <div class="pop-head">
               <span class="name">Jiji</span>
