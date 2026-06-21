@@ -111,21 +111,6 @@
   .bar > span { display: block; height: 100%; background: var(--fg); border-radius: 99px; }
   .reset { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
 
-  /* Info row */
-  .divider { height: 1px; background: var(--line); }
-  .info { padding-top: 56px; padding-bottom: 8px; }
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px 56px; }
-  .info h2 {
-    font-size: 13px; text-transform: uppercase; letter-spacing: 0.07em;
-    color: var(--muted); margin: 0 0 14px; font-weight: 600;
-  }
-  .info ul, .info ol { margin: 0; padding-left: 18px; }
-  .info li { margin-bottom: 8px; font-size: 15px; }
-  .info code {
-    font-family: var(--mono); font-size: 12.5px; background: var(--card);
-    border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px;
-  }
-
   footer {
     margin-top: auto;
     padding-top: 56px; padding-bottom: 36px;
@@ -150,8 +135,6 @@
     .mock-wrap { order: 2; }
   }
   @media (max-width: 560px) {
-    .info-grid { grid-template-columns: 1fr; gap: 32px; }
-    .info { text-align: left; }
     .topnav a { margin-left: 16px; }
   }
 </style>
@@ -209,30 +192,6 @@
       </div>
     </section>
 
-    <div class="wrap"><div class="divider"></div></div>
-
-    <section class="wrap info">
-      <div class="info-grid">
-        <div>
-          <h2>What it shows</h2>
-          <ul>
-            <li>Current session usage, live</li>
-            <li>Weekly usage — all models &amp; Sonnet only</li>
-            <li>Reset times for every limit</li>
-            <li>Sign in once; your session stays on your Mac</li>
-          </ul>
-        </div>
-        <div>
-          <h2>Install</h2>
-          <ol>
-            <li>Download the <code>.dmg</code> and open it</li>
-            <li>Drag <b>Jiji</b> into Applications</li>
-            <li>First launch: right-click → <b>Open</b></li>
-            <li>Sign in to claude.ai when prompted</li>
-          </ol>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="wrap">
