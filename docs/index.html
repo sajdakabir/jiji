@@ -32,6 +32,7 @@
     display: flex;
     flex-direction: column;
   }
+  main { flex: 1; display: flex; align-items: center; }
   .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding-left: 28px; padding-right: 28px; }
 
   /* Top bar */
@@ -45,12 +46,13 @@
 
   /* Hero: two columns on desktop */
   .hero {
+    width: 100%;
     display: grid;
     grid-template-columns: 1.05fr 0.95fr;
     align-items: center;
     gap: 64px;
-    padding-top: 64px;
-    padding-bottom: 72px;
+    padding-top: 24px;
+    padding-bottom: 24px;
   }
   .hero-copy { min-width: 0; }
 
@@ -112,8 +114,7 @@
   .reset { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
 
   footer {
-    margin-top: auto;
-    padding-top: 56px; padding-bottom: 36px;
+    padding-top: 28px; padding-bottom: 28px;
     display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
     color: var(--muted); font-size: 13.5px; font-family: var(--mono);
   }
