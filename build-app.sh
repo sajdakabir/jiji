@@ -24,9 +24,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/Resources"
 
-echo "[3/4] Copying binary + Info.plist"
+echo "[3/4] Copying binary + Info.plist + app icon"
 cp "$BIN_PATH" "$APP/Contents/MacOS/${EXEC_NAME}"
 cp Info.plist "$APP/Contents/Info.plist"
+if [[ -f AppIcon.icns ]]; then
+    cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 echo "[4/4] Ad-hoc code signing (required by Gatekeeper for WKWebView XPC)"
 codesign --force --deep --sign - "$APP" >/dev/null
