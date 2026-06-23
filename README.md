@@ -34,6 +34,7 @@ Cookies are stored locally inside the app's sandbox via `WKWebsiteDataStore.defa
 
 Jiji loads `https://claude.ai/settings/usage` in a hidden `WKWebView` once a minute, reads the "Current session" row from the rendered DOM, and parses out the percentage plus any "Resets in ..." text. The menu bar icon (an SF Symbol) changes based on the percent bucket.
 
-## Caveat
+## Demo
 
-Jiji scrapes the rendered DOM of the claude.ai usage page. If Anthropic changes the structure of that page, the DOM-reading script will need to be updated.
+https://youtu.be/3Djqtq1B0E4
+
